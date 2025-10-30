@@ -1,34 +1,46 @@
+# Nama workflow yang akan muncul di tab 'Actions'
+name: Build Android APK (Debug)
+
+# Atur kapan workflow ini harus dijalankan
 on:
   push:
+    # Workflow akan berjalan setiap kali ada push ke branch 'main'
     branches: [ main ]
+  # Memungkinkan Anda menjalankan workflow ini secara manual dari tab 'Actions'
+  workflow_dispatch:
 
+# Definisi job yang akan dijalankan
 jobs:
-  build-and-deploy:
+  build:
+    # Jalankan job ini di mesin virtual Ubuntu terbaru
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: 1. Checkout Code 
+      uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
+    - name: 2. Set Up JDK 17
+      # Mengatur lingkungan Java Development Kit yang diperlukan untuk Android
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 3. Make Gradle Executable
+      # Memastikan skrip Gradle (gradlew) dapat dieksekusi
+      run: chmod +x ./gradlew
 
-      - name: Install dependencies
-        run: npm ci
+    - name: 4. Build Debug APK
+      # Menjalankan perintah Gradle untuk membuat APK versi Debug
+      # APK ini tidak perlu signing key
+      run: ./gradlew assembleDebug
 
-      - name: Build
-        run: npm run build
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v20
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}        # create in Vercel
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: .
-          vercel-args: '--prod'  # remove or change to deploy to preview instead
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+    - name: 5. Upload APK Artifact
+      # Menyimpan hasil APK agar bisa diunduh dari halaman Actions
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        # Lokasi default file APK di proyek Android
+        path: app/build/outputs/apk/debug/app-debug.apk
+        # Atur durasi penyimpanan artifact (opsional)
+        retention-days: 5
